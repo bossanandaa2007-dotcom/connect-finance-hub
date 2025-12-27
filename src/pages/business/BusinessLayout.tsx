@@ -1,14 +1,23 @@
 import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Plus, PieChart, MessageCircle, Building2 } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Package,
+  Plus,
+  PieChart,
+  Building2,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+/* =========================
+   NAV ITEMS (Chat Removed)
+========================= */
 
 const navItems = [
   { path: '/business/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/business/products', icon: Package, label: 'Products' },
   { path: '/business/add', icon: Plus, label: 'Add', isFab: true },
   { path: '/business/analysis', icon: PieChart, label: 'Analysis' },
-  { path: '/business/chat', icon: MessageCircle, label: 'Chat' },
 ];
 
 const BusinessLayout: React.FC = () => {
@@ -49,20 +58,27 @@ const BusinessLayout: React.FC = () => {
                 onClick={() => navigate(item.path)}
                 className={cn(
                   "flex flex-col items-center py-2 px-4 rounded-lg transition-colors",
-                  isActive ? "text-accent" : "text-muted-foreground hover:text-foreground"
+                  isActive
+                    ? "text-accent"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <Icon className="w-6 h-6" />
-                <span className="text-xs mt-1 font-medium">{item.label}</span>
+                <span className="text-xs mt-1 font-medium">
+                  {item.label}
+                </span>
               </button>
             );
           })}
-          {/* Profile Tab */}
+
+          {/* Business Profile */}
           <button
             onClick={() => navigate('/business/profile')}
             className={cn(
               "flex flex-col items-center py-2 px-4 rounded-lg transition-colors",
-              location.pathname === '/business/profile' ? "text-accent" : "text-muted-foreground hover:text-foreground"
+              location.pathname === '/business/profile'
+                ? "text-accent"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             <Building2 className="w-6 h-6" />

@@ -1,243 +1,274 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useApp } from '@/contexts/AppContext';
-import { Plus, Package, Wrench, DollarSign, Hash, Tag, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+/* --------------------
+   Animation
+-------------------- */
+const cardAnim = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0 },
+};
 
 const ProductsServicesPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'products' | 'services'>('products');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    costPrice: '',
-    sellingPrice: '',
-    quantity: '',
-  });
-  const { products, services, addProduct, addService, businessProfile } = useApp();
+  const {
+    products,
+    services,
+    addProduct,
+    addService,
+    expenseDefinitions,
+    addExpenseDefinition,
+    businessEntries,
+    businessProfile,
+  } = useApp();
 
-  const currencySymbol = businessProfile?.currency === 'USD' ? '$' : 
-                         businessProfile?.currency === 'EUR' ? '€' : '$';
+  const currency = businessProfile?.currency || '₹';
 
-  const handleAdd = () => {
-    if (activeTab === 'products') {
+  /* --------------------
+     OFFERINGS STATE
+  -------------------- */
+  const [offerType, setOfferType] = useState<'product' | 'service'>('product');
+  const [offerName, setOfferName] = useState('');
+  const [offerPrice, setOfferPrice] = useState('');
+
+  /* --------------------
+     EXPENSE STATE
+  -------------------- */
+  const [expenseType, setExpenseType] = useState<'salary' | 'petty'>('salary');
+  const [expenseName, setExpenseName] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
+
+  /* --------------------
+     HANDLERS
+  -------------------- */
+  const addOffering = () => {
+    if (!offerName.trim() || !offerPrice) return;
+
+    if (offerType === 'product') {
       addProduct({
-        name: formData.name,
-        category: formData.category,
-        costPrice: parseFloat(formData.costPrice),
-        sellingPrice: parseFloat(formData.sellingPrice),
-        quantity: parseInt(formData.quantity),
+        name: offerName.trim(),
+        category: 'General',
+        costPrice: 0,
+        sellingPrice: Number(offerPrice),
+        quantity: 1,
       });
     } else {
       addService({
-        name: formData.name,
-        category: formData.category,
-        cost: parseFloat(formData.costPrice),
-        sellingPrice: parseFloat(formData.sellingPrice),
+        name: offerName.trim(),
+        category: 'General',
+        cost: 0,
+        sellingPrice: Number(offerPrice),
       });
     }
-    setFormData({ name: '', category: '', costPrice: '', sellingPrice: '', quantity: '' });
-    setShowAddForm(false);
+
+    setOfferName('');
+    setOfferPrice('');
   };
 
-  const sampleProducts = [
-    { id: '1', name: 'Premium Widget', category: 'Electronics', costPrice: 50, sellingPrice: 99, quantity: 25 },
-    { id: '2', name: 'Eco Bag', category: 'Accessories', costPrice: 5, sellingPrice: 15, quantity: 100 },
-  ];
+  const addExpense = () => {
+    if (!expenseName.trim()) return;
 
-  const sampleServices = [
-    { id: '1', name: 'Consulting Hour', category: 'Professional', cost: 50, sellingPrice: 150 },
-    { id: '2', name: 'Website Design', category: 'Creative', cost: 200, sellingPrice: 800 },
-  ];
+    addExpenseDefinition({
+      name: expenseName.trim(),
+      expenseType,
+      defaultAmount: expenseAmount
+        ? Number(expenseAmount)
+        : undefined,
+    });
 
-  const displayProducts = products.length > 0 ? products : sampleProducts;
-  const displayServices = services.length > 0 ? services : sampleServices;
+    setExpenseName('');
+    setExpenseAmount('');
+  };
 
   return (
-    <div className="p-4 pb-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Products & Services</h1>
-        <p className="text-muted-foreground">Manage your inventory and offerings</p>
+    <div className="max-w-3xl mx-auto px-4 py-8 space-y-10">
+      {/* ======================
+          HEADER
+      ====================== */}
+      <div>
+        <h1 className="text-2xl font-semibold">Business Setup</h1>
+        <p className="text-sm text-muted-foreground">
+          Define products, services, and recurring expenses
+        </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab('products')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${
-            activeTab === 'products'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-card border border-border text-muted-foreground hover:border-primary/50'
-          }`}
-        >
-          <Package className="w-5 h-5" />
-          Products
-        </button>
-        <button
-          onClick={() => setActiveTab('services')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${
-            activeTab === 'services'
-              ? 'bg-accent text-accent-foreground'
-              : 'bg-card border border-border text-muted-foreground hover:border-accent/50'
-          }`}
-        >
-          <Wrench className="w-5 h-5" />
-          Services
-        </button>
-      </div>
-
-      {/* Add Button */}
-      <Button 
-        variant="outline" 
-        className="w-full mb-6"
-        onClick={() => setShowAddForm(true)}
+      {/* ======================
+          OFFERINGS
+      ====================== */}
+      <motion.div
+        variants={cardAnim}
+        initial="hidden"
+        animate="visible"
+        className="border rounded-xl p-5 bg-white space-y-4"
       >
-        <Plus className="w-5 h-5" />
-        Add {activeTab === 'products' ? 'Product' : 'Service'}
-      </Button>
+        <h2 className="font-medium text-lg">Products & Services</h2>
 
-      {/* Add Form */}
-      {showAddForm && (
-        <div className="mb-6 p-4 rounded-xl bg-card border border-border space-y-4 animate-slide-up">
-          <h3 className="font-semibold text-foreground">
-            New {activeTab === 'products' ? 'Product' : 'Service'}
-          </h3>
-          
-          <div className="relative">
-            <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="pl-12"
-            />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <select
+            value={offerType}
+            onChange={(e) =>
+              setOfferType(e.target.value as 'product' | 'service')
+            }
+            className="border rounded px-3 py-2"
+          >
+            <option value="product">Product</option>
+            <option value="service">Service</option>
+          </select>
 
-          <Input
-            placeholder="Category"
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+          <input
+            className="border rounded px-3 py-2 md:col-span-2"
+            placeholder="Name (Apple Juice, Web Dev...)"
+            value={offerName}
+            onChange={(e) => setOfferName(e.target.value)}
           />
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="relative">
-              <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="number"
-                placeholder="Cost Price"
-                value={formData.costPrice}
-                onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                className="pl-12"
-              />
-            </div>
-            <div className="relative">
-              <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="number"
-                placeholder="Selling Price"
-                value={formData.sellingPrice}
-                onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
-                className="pl-12"
-              />
-            </div>
-          </div>
-
-          {activeTab === 'products' && (
-            <div className="relative">
-              <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="number"
-                placeholder="Quantity"
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                className="pl-12"
-              />
-            </div>
-          )}
-
-          <div className="flex gap-3">
-            <Button 
-              className="flex-1"
-              onClick={handleAdd}
-              disabled={!formData.name || !formData.costPrice || !formData.sellingPrice}
-            >
-              <Check className="w-5 h-5" />
-              Save
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => setShowAddForm(false)}
-            >
-              Cancel
-            </Button>
-          </div>
+          <input
+            className="border rounded px-3 py-2"
+            placeholder={`${currency} Price`}
+            value={offerPrice}
+            onChange={(e) => setOfferPrice(e.target.value)}
+          />
         </div>
-      )}
 
-      {/* Items List */}
-      <div className="space-y-3">
-        {activeTab === 'products' ? (
-          displayProducts.map((product) => {
-            const profit = product.sellingPrice - product.costPrice;
-            const margin = ((profit / product.sellingPrice) * 100).toFixed(0);
-            
-            return (
-              <div key={product.id} className="p-4 rounded-xl bg-card border border-border">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h4 className="font-medium text-foreground">{product.name}</h4>
-                    <p className="text-sm text-muted-foreground">{product.category}</p>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success">
-                    {margin}% margin
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex gap-4">
-                    <span className="text-muted-foreground">
-                      Cost: <span className="text-foreground font-medium">{currencySymbol}{product.costPrice}</span>
-                    </span>
-                    <span className="text-muted-foreground">
-                      Price: <span className="text-foreground font-medium">{currencySymbol}{product.sellingPrice}</span>
-                    </span>
-                  </div>
-                  <span className="text-muted-foreground">
-                    Qty: <span className="text-foreground font-medium">{product.quantity}</span>
-                  </span>
-                </div>
+        <div className="flex justify-end">
+          <button
+            onClick={addOffering}
+            className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg"
+          >
+            Add
+          </button>
+        </div>
+
+        {(products.length > 0 || services.length > 0) && (
+          <div className="pt-3 space-y-2">
+            {[...products, ...services].map((o) => (
+              <div
+                key={o.id}
+                className="flex justify-between border rounded-lg px-4 py-2"
+              >
+                <span>{o.name}</span>
+                <span className="font-medium">
+                  {currency}
+                  {o.sellingPrice}
+                </span>
               </div>
-            );
-          })
-        ) : (
-          displayServices.map((service) => {
-            const profit = service.sellingPrice - service.cost;
-            const margin = ((profit / service.sellingPrice) * 100).toFixed(0);
-            
-            return (
-              <div key={service.id} className="p-4 rounded-xl bg-card border border-border">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h4 className="font-medium text-foreground">{service.name}</h4>
-                    <p className="text-sm text-muted-foreground">{service.category}</p>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-accent/10 text-accent">
-                    {margin}% margin
-                  </span>
-                </div>
-                <div className="flex gap-4 text-sm">
-                  <span className="text-muted-foreground">
-                    Cost: <span className="text-foreground font-medium">{currencySymbol}{service.cost}</span>
-                  </span>
-                  <span className="text-muted-foreground">
-                    Price: <span className="text-foreground font-medium">{currencySymbol}{service.sellingPrice}</span>
-                  </span>
-                </div>
-              </div>
-            );
-          })
+            ))}
+          </div>
         )}
-      </div>
+      </motion.div>
+
+      {/* ======================
+          EXPENSE DEFINITIONS
+      ====================== */}
+      <motion.div
+        variants={cardAnim}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.05 }}
+        className="border rounded-xl p-5 bg-white space-y-4"
+      >
+        <h2 className="font-medium text-lg">Expense Definitions</h2>
+        <p className="text-xs text-muted-foreground">
+          Salary and recurring petty costs
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <select
+            value={expenseType}
+            onChange={(e) =>
+              setExpenseType(e.target.value as 'salary' | 'petty')
+            }
+            className="border rounded px-3 py-2"
+          >
+            <option value="salary">Salary</option>
+            <option value="petty">Petty</option>
+          </select>
+
+          <input
+            className="border rounded px-3 py-2 md:col-span-2"
+            placeholder={
+              expenseType === 'salary'
+                ? 'Employee name'
+                : 'Expense name'
+            }
+            value={expenseName}
+            onChange={(e) => setExpenseName(e.target.value)}
+          />
+
+          <input
+            className="border rounded px-3 py-2"
+            placeholder={`${currency} Default`}
+            value={expenseAmount}
+            onChange={(e) => setExpenseAmount(e.target.value)}
+          />
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={addExpense}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg"
+          >
+            Add
+          </button>
+        </div>
+
+        {expenseDefinitions.length > 0 && (
+          <div className="pt-3 space-y-2">
+            {expenseDefinitions.map((e) => (
+              <div
+                key={e.id}
+                className="flex justify-between border rounded-lg px-4 py-2"
+              >
+                <span>{e.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {e.expenseType}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      {/* ======================
+          HISTORY PREVIEW
+      ====================== */}
+      <motion.div
+        variants={cardAnim}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.1 }}
+        className="border rounded-xl p-5 bg-white"
+      >
+        <h2 className="font-medium text-lg mb-3">Recent Activity</h2>
+
+        {businessEntries.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No transactions yet
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {businessEntries.slice(0, 5).map((e) => (
+              <div
+                key={e.id}
+                className="flex justify-between border rounded-lg px-4 py-2"
+              >
+                <span>{e.refName || 'Transaction'}</span>
+                <span
+                  className={
+                    e.type === 'expense'
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                  }
+                >
+                  {e.type === 'expense' ? '-' : '+'}
+                  {currency}
+                  {e.amount}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 };
