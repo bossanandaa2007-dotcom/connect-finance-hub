@@ -1,8 +1,16 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+/* ============================
+   GLOBAL TYPES
+============================ */
+
 export type UserMode = 'personal' | 'business' | null;
 export type TransactionType = 'income' | 'expense';
 export type BusinessEntryType = 'revenue' | 'expense' | 'investment';
+
+/* ============================
+   PERSONAL PROFILE
+============================ */
 
 export interface UserProfile {
   fullName: string;
@@ -13,18 +21,26 @@ export interface UserProfile {
   email: string;
 }
 
+/* ============================
+   BUSINESS PROFILE
+============================ */
+
 export interface BusinessProfile {
   ownerName: string;
   businessName: string;
-  businessType: 'product' | 'service' | 'hybrid';
+  industries: string[];
   currency: string;
-  startDate: string;
+  startDate?: string;
   location?: {
     address: string;
     lat: number;
     lng: number;
   };
 }
+
+/* ============================
+   SHARED ENTITIES
+============================ */
 
 export interface Category {
   id: string;
@@ -41,6 +57,10 @@ export interface Transaction {
   date: Date;
   notes?: string;
 }
+
+/* ============================
+   BUSINESS OBJECTS (SETUP)
+============================ */
 
 export interface Product {
   id: string;
@@ -59,101 +79,127 @@ export interface Service {
   sellingPrice: number;
 }
 
+/* ============================
+   EXPENSE DEFINITIONS (NEW)
+============================ */
+
+export type ExpenseDefinitionType = 'salary' | 'petty';
+
+export interface ExpenseDefinition {
+  id: string;
+  name: string;
+  expenseType: ExpenseDefinitionType;
+  defaultAmount?: number;
+}
+
+/* ============================
+   BUSINESS HISTORY (STRICT)
+============================ */
+
 export interface BusinessEntry {
   id: string;
-  type: BusinessEntryType;
-  productOrService?: string;
-  category: string;
+  type: BusinessEntryType;        // revenue | expense | investment
+  refId?: string;                // productId / serviceId / expenseDefId
+  refType?: 'product' | 'service' | 'salary' | 'petty';
+  refName?: string;
   amount: number;
   date: Date;
   notes?: string;
 }
 
+/* ============================
+   BUDGET
+============================ */
+
 export interface Budget {
   total: number;
-  categories: { [key: string]: number };
+  categories: Record<string, number>;
 }
+
+/* ============================
+   CONTEXT SHAPE
+============================ */
 
 interface AppContextType {
   isAuthenticated: boolean;
-  setIsAuthenticated: (value: boolean) => void;
+  setIsAuthenticated: (v: boolean) => void;
+
   userMode: UserMode;
-  setUserMode: (mode: UserMode) => void;
+  setUserMode: (m: UserMode) => void;
+
   userProfile: UserProfile | null;
-  setUserProfile: (profile: UserProfile | null) => void;
+  setUserProfile: (p: UserProfile | null) => void;
+
   businessProfile: BusinessProfile | null;
-  setBusinessProfile: (profile: BusinessProfile | null) => void;
+  setBusinessProfile: (p: BusinessProfile | null) => void;
+
   transactions: Transaction[];
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+  addTransaction: (t: Omit<Transaction, 'id'>) => void;
+
   budget: Budget;
-  setBudget: (budget: Budget) => void;
+  setBudget: (b: Budget) => void;
+
   products: Product[];
-  addProduct: (product: Omit<Product, 'id'>) => void;
+  addProduct: (p: Omit<Product, 'id'>) => void;
+
   services: Service[];
-  addService: (service: Omit<Service, 'id'>) => void;
+  addService: (s: Omit<Service, 'id'>) => void;
+
+  expenseDefinitions: ExpenseDefinition[];
+  addExpenseDefinition: (e: Omit<ExpenseDefinition, 'id'>) => void;
+
   businessEntries: BusinessEntry[];
-  addBusinessEntry: (entry: Omit<BusinessEntry, 'id'>) => void;
+  addBusinessEntry: (e: Omit<BusinessEntry, 'id'>) => void;
 }
 
-const defaultCategories: Category[] = [
-  { id: '1', name: 'Home Bills', icon: 'Home', color: 'bg-blue-500' },
-  { id: '2', name: 'Entertainment', icon: 'Film', color: 'bg-purple-500' },
-  { id: '3', name: 'Groceries', icon: 'ShoppingCart', color: 'bg-green-500' },
-  { id: '4', name: 'Snacks', icon: 'Cookie', color: 'bg-orange-500' },
-  { id: '5', name: 'Health', icon: 'Heart', color: 'bg-red-500' },
-  { id: '6', name: 'Education', icon: 'GraduationCap', color: 'bg-indigo-500' },
-  { id: '7', name: 'Grooming', icon: 'Scissors', color: 'bg-pink-500' },
-  { id: '8', name: 'Shopping', icon: 'ShoppingBag', color: 'bg-yellow-500' },
-  { id: '9', name: 'Transportation', icon: 'Car', color: 'bg-cyan-500' },
-  { id: '10', name: 'Gardening', icon: 'Flower2', color: 'bg-lime-500' },
-  { id: '11', name: 'Insurance', icon: 'Shield', color: 'bg-slate-500' },
-  { id: '12', name: 'Housing', icon: 'Building', color: 'bg-amber-500' },
-  { id: '13', name: 'Miscellaneous', icon: 'MoreHorizontal', color: 'bg-gray-500' },
-];
+/* ============================
+   CONTEXT
+============================ */
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userMode, setUserMode] = useState<UserMode>(null);
+
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: '1', type: 'expense', category: 'Groceries', amount: 150, date: new Date(), notes: 'Weekly groceries' },
-    { id: '2', type: 'income', category: 'Salary', amount: 5000, date: new Date(), notes: 'Monthly salary' },
-    { id: '3', type: 'expense', category: 'Entertainment', amount: 50, date: new Date(), notes: 'Movie night' },
-  ]);
-  const [budget, setBudget] = useState<Budget>({
-    total: 3000,
-    categories: {
-      'Groceries': 500,
-      'Entertainment': 200,
-      'Transportation': 300,
-    },
-  });
+  const [businessProfile, setBusinessProfile] =
+    useState<BusinessProfile | null>(null);
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budget, setBudget] = useState<Budget>({ total: 0, categories: {} });
+
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [expenseDefinitions, setExpenseDefinitions] =
+    useState<ExpenseDefinition[]>([]);
+
   const [businessEntries, setBusinessEntries] = useState<BusinessEntry[]>([]);
 
-  const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction = { ...transaction, id: Date.now().toString() };
-    setTransactions((prev) => [newTransaction, ...prev]);
-  };
+  /* ============================
+     MUTATORS
+  ============================ */
 
-  const addProduct = (product: Omit<Product, 'id'>) => {
-    const newProduct = { ...product, id: Date.now().toString() };
-    setProducts((prev) => [...prev, newProduct]);
-  };
+  const addTransaction = (t: Omit<Transaction, 'id'>) =>
+    setTransactions((p) => [{ ...t, id: Date.now().toString() }, ...p]);
 
-  const addService = (service: Omit<Service, 'id'>) => {
-    const newService = { ...service, id: Date.now().toString() };
-    setServices((prev) => [...prev, newService]);
-  };
+  const addProduct = (p: Omit<Product, 'id'>) =>
+    setProducts((x) => [...x, { ...p, id: Date.now().toString() }]);
 
-  const addBusinessEntry = (entry: Omit<BusinessEntry, 'id'>) => {
-    const newEntry = { ...entry, id: Date.now().toString() };
-    setBusinessEntries((prev) => [newEntry, ...prev]);
-  };
+  const addService = (s: Omit<Service, 'id'>) =>
+    setServices((x) => [...x, { ...s, id: Date.now().toString() }]);
+
+  const addExpenseDefinition = (e: Omit<ExpenseDefinition, 'id'>) =>
+    setExpenseDefinitions((x) => [...x, { ...e, id: Date.now().toString() }]);
+
+  /**
+   * THE ONLY PLACE MONEY MOVES (HISTORY)
+   */
+  const addBusinessEntry = (e: Omit<BusinessEntry, 'id'>) =>
+    setBusinessEntries((x) => [
+      { ...e, id: Date.now().toString() },
+      ...x,
+    ]);
 
   return (
     <AppContext.Provider
@@ -174,6 +220,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addProduct,
         services,
         addService,
+        expenseDefinitions,
+        addExpenseDefinition,
         businessEntries,
         addBusinessEntry,
       }}
@@ -184,11 +232,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 };
 
 export const useApp = () => {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useApp must be used within AppProvider');
+  return ctx;
 };
-
-export { defaultCategories };

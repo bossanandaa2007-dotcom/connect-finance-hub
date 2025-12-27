@@ -1,188 +1,269 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useApp } from '@/contexts/AppContext';
-import { useNavigate } from 'react-router-dom';
-import { User, Building2, Calendar, MapPin, ArrowRight, Check, Package, Wrench, Layers } from 'lucide-react';
+import {
+  User,
+  Building2,
+  ArrowRight,
+  MapPin,
+  Calendar,
+} from 'lucide-react';
 
-const currencies = [
-  { code: 'USD', symbol: '$', name: 'US Dollar' },
-  { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'GBP', symbol: '£', name: 'British Pound' },
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+/* =========================
+   CONSTANTS
+========================= */
+
+const INDUSTRIES = [
+  'Automotive',
+  'Consumer Goods & Retail',
+  'Education',
+  'Financial Services',
+  'Healthcare & Life Sciences',
+  'Manufacturing',
+  'Professional Services',
+  'Technology',
+  'Hospitality & Food Services',
+  'Real Estate & Construction',
+  'Logistics & Transportation',
+  'Media & Marketing',
+  'Freelancer / Consultant',
+  'Other',
 ];
 
-const businessTypes = [
-  { id: 'product', name: 'Product', icon: Package, description: 'Sell physical or digital products' },
-  { id: 'service', name: 'Service', icon: Wrench, description: 'Offer services to clients' },
-  { id: 'hybrid', name: 'Hybrid', icon: Layers, description: 'Both products and services' },
+const COUNTRIES = [
+  { code: 'INR', flag: '🇮🇳' },
+  { code: 'USD', flag: '🇺🇸' },
+  { code: 'GBP', flag: '🇬🇧' },
+  { code: 'EUR', flag: '🇪🇺' },
 ];
+
+const BUSINESS_PLACES = [
+  'Office',
+  'Home Office',
+  'Virtual Business',
+  'Hybrid (Office + Remote)',
+];
+
+/* =========================
+   VALIDATION
+========================= */
+
+const isValidOwnerName = (v: string) =>
+  /^[A-Za-z ]+$/.test(v.trim()) && v.trim().length >= 2;
+
+const isValidBusinessName = (v: string) =>
+  /^[A-Za-z .,&\-()]+$/.test(v.trim()) && v.trim().length >= 2;
+
+/* =========================
+   COMPONENT
+========================= */
 
 const BusinessOnboardingPage: React.FC = () => {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    ownerName: '',
-    businessName: '',
-    businessType: '' as 'product' | 'service' | 'hybrid' | '',
-    currency: 'USD',
-    startDate: '',
-    location: '',
-  });
   const { setBusinessProfile } = useApp();
   const navigate = useNavigate();
 
-  const totalSteps = 3;
+  const [step, setStep] = useState(1);
+  const [ownerNameError, setOwnerNameError] = useState('');
 
-  const handleNext = () => {
-    if (step < totalSteps) {
-      setStep(step + 1);
-    } else {
-      setBusinessProfile({
-        ownerName: formData.ownerName,
-        businessName: formData.businessName,
-        businessType: formData.businessType as 'product' | 'service' | 'hybrid',
-        currency: formData.currency,
-        startDate: formData.startDate,
-        location: { address: formData.location, lat: 0, lng: 0 },
-      });
-      navigate('/business/dashboard');
-    }
-  };
+  const [formData, setFormData] = useState({
+    ownerName: '',
+    businessName: '',
+    industries: [] as string[],
+    currency: '',
+    startDate: '',
+    businessPlace: '',
+    location: '',
+  });
 
-  const handleBack = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    }
+  /* =========================
+     HELPERS
+  ========================= */
+
+  const toggleIndustry = (industry: string) => {
+    setFormData((prev) => {
+      if (prev.industries.includes(industry)) {
+        return {
+          ...prev,
+          industries: prev.industries.filter((i) => i !== industry),
+        };
+      }
+      if (prev.industries.length >= 4) return prev;
+      return { ...prev, industries: [...prev.industries, industry] };
+    });
   };
 
   const isStepValid = () => {
-    switch (step) {
-      case 1:
-        return formData.ownerName.length >= 2 && formData.businessName.length >= 2;
-      case 2:
-        return formData.businessType && formData.currency;
-      case 3:
-        return formData.startDate;
-      default:
-        return false;
+    if (step === 1) {
+      return (
+        isValidOwnerName(formData.ownerName) &&
+        isValidBusinessName(formData.businessName)
+      );
     }
+
+    if (step === 2) {
+      return formData.industries.length > 0 && !!formData.currency;
+    }
+
+    if (step === 3) {
+      if (!formData.businessPlace) return false;
+      if (
+        formData.businessPlace !== 'Virtual Business' &&
+        !formData.location
+      )
+        return false;
+      return true;
+    }
+
+    return false;
   };
 
+  const handleNext = () => {
+    if (step < 3) {
+      setStep(step + 1);
+      return;
+    }
+
+    setBusinessProfile({
+      ownerName: formData.ownerName.trim(),
+      businessName: formData.businessName.trim(),
+      industries: formData.industries,
+      currency: formData.currency,
+      startDate: formData.startDate || undefined,
+      location:
+        formData.businessPlace === 'Virtual Business'
+          ? undefined
+          : {
+              address: formData.location,
+              lat: 0,
+              lng: 0,
+            },
+    });
+
+    navigate('/business/dashboard');
+  };
+
+  /* =========================
+     UI
+  ========================= */
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Progress Bar */}
-      <div className="p-6 pt-8">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-muted-foreground">Step {step} of {totalSteps}</span>
-          <span className="text-sm font-medium text-accent">{Math.round((step / totalSteps) * 100)}%</span>
-        </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-accent rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${(step / totalSteps) * 100}%` }}
-          />
-        </div>
-      </div>
+    <div className="min-h-screen bg-background flex justify-center">
+      <div className="w-full max-w-xl px-6 py-8 space-y-8">
 
-      {/* Content */}
-      <div className="flex-1 px-6 py-8">
+        {/* PROGRESS */}
+        <div>
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span>Step {step} of 3</span>
+            <span>{Math.round((step / 3) * 100)}%</span>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-600 transition-all"
+              style={{ width: `${(step / 3) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        {/* STEP 1 */}
         {step === 1 && (
-          <div className="animate-fade-in">
-            <h2 className="text-2xl font-bold text-foreground mb-2">Set up your business</h2>
-            <p className="text-muted-foreground mb-8">Tell us about your business</p>
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Set up your business</h2>
 
-            {/* Owner Name */}
-            <div className="space-y-2 mb-6">
-              <label className="text-sm font-medium text-foreground">Owner Name</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <div>
+              <label className="text-sm font-medium">Owner Name</label>
+              <div className="relative mt-2">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Your full name"
+                  className="pl-10"
                   value={formData.ownerName}
-                  onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                  className="pl-12"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, ownerName: value });
+
+                    if (!/^[A-Za-z ]*$/.test(value)) {
+                      setOwnerNameError(
+                        'Only alphabets are allowed. Numbers and special characters are not permitted.'
+                      );
+                    } else {
+                      setOwnerNameError('');
+                    }
+                  }}
                 />
               </div>
+
+              {ownerNameError && (
+                <p className="text-sm text-red-500 mt-1">
+                  {ownerNameError}
+                </p>
+              )}
             </div>
 
-            {/* Business Name */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Business Name</label>
-              <div className="relative">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <div>
+              <label className="text-sm font-medium">Business Name</label>
+              <div className="relative mt-2">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Your business name"
+                  className="pl-10"
                   value={formData.businessName}
-                  onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                  className="pl-12"
+                  onChange={(e) =>
+                    setFormData({ ...formData, businessName: e.target.value })
+                  }
                 />
               </div>
             </div>
           </div>
         )}
 
+        {/* STEP 2 */}
         {step === 2 && (
-          <div className="animate-fade-in">
-            <h2 className="text-2xl font-bold text-foreground mb-2">Business Details</h2>
-            <p className="text-muted-foreground mb-8">Choose your business type and currency</p>
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Business Details</h2>
 
-            {/* Business Type */}
-            <div className="space-y-2 mb-6">
-              <label className="text-sm font-medium text-foreground">Business Type</label>
-              <div className="space-y-3">
-                {businessTypes.map((type) => {
-                  const Icon = type.icon;
+            <div>
+              <label className="text-sm font-medium">
+                Industries (max 4)
+              </label>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                {INDUSTRIES.map((i) => {
+                  const active = formData.industries.includes(i);
                   return (
                     <button
-                      key={type.id}
-                      onClick={() => setFormData({ ...formData, businessType: type.id as any })}
-                      className={`w-full p-4 rounded-xl border-2 transition-all text-left flex items-center gap-4 ${
-                        formData.businessType === type.id
-                          ? 'border-accent bg-accent/5'
-                          : 'border-border bg-card hover:border-accent/50'
-                      }`}
+                      key={i}
+                      onClick={() => toggleIndustry(i)}
+                      className={`px-3 py-2 rounded-lg border text-sm text-left transition
+                        ${
+                          active
+                            ? 'bg-green-100 border-green-600 text-green-700'
+                            : 'hover:border-green-400'
+                        }`}
                     >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        formData.businessType === type.id ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
-                      }`}>
-                        <Icon className="w-6 h-6" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-foreground">{type.name}</h4>
-                        <p className="text-sm text-muted-foreground">{type.description}</p>
-                      </div>
-                      {formData.businessType === type.id && (
-                        <Check className="w-5 h-5 text-accent" />
-                      )}
+                      {i}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Currency Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Business Currency</label>
-              <div className="grid grid-cols-2 gap-3">
-                {currencies.map((currency) => (
+            <div>
+              <label className="text-sm font-medium">Currency</label>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                {COUNTRIES.map((c) => (
                   <button
-                    key={currency.code}
-                    onClick={() => setFormData({ ...formData, currency: currency.code })}
-                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
-                      formData.currency === currency.code
-                        ? 'border-accent bg-accent/5'
-                        : 'border-border bg-card hover:border-accent/50'
-                    }`}
+                    key={c.code}
+                    onClick={() =>
+                      setFormData({ ...formData, currency: c.code })
+                    }
+                    className={`px-4 py-3 rounded-lg border flex items-center gap-3
+                      ${
+                        formData.currency === c.code
+                          ? 'bg-green-100 border-green-600'
+                          : 'hover:border-green-400'
+                      }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-lg font-semibold text-foreground">{currency.symbol}</span>
-                        <span className="ml-2 text-sm text-muted-foreground">{currency.code}</span>
-                      </div>
-                      {formData.currency === currency.code && (
-                        <Check className="w-5 h-5 text-accent" />
-                      )}
-                    </div>
+                    <span className="text-lg">{c.flag}</span>
+                    <span className="font-medium">{c.code}</span>
                   </button>
                 ))}
               </div>
@@ -190,70 +271,88 @@ const BusinessOnboardingPage: React.FC = () => {
           </div>
         )}
 
+        {/* STEP 3 */}
         {step === 3 && (
-          <div className="animate-fade-in">
-            <h2 className="text-2xl font-bold text-foreground mb-2">Final Details</h2>
-            <p className="text-muted-foreground mb-8">When did your business start?</p>
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Final Details</h2>
 
-            {/* Start Date */}
-            <div className="space-y-2 mb-6">
-              <label className="text-sm font-medium text-foreground">Business Start Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <div>
+              <label className="text-sm font-medium">
+                Start Date (Optional)
+              </label>
+              <div className="relative mt-2">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="date"
+                  className="pl-10"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="pl-12"
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
                 />
               </div>
             </div>
 
-            {/* Location */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Business Location (Optional)</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  placeholder="Enter your business address"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="pl-12"
-                />
+            <div>
+              <label className="text-sm font-medium">Business Place</label>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                {BUSINESS_PLACES.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() =>
+                      setFormData({ ...formData, businessPlace: p })
+                    }
+                    className={`px-3 py-2 rounded-lg border text-sm
+                      ${
+                        formData.businessPlace === p
+                          ? 'bg-green-100 border-green-600 text-green-700'
+                          : 'hover:border-green-400'
+                      }`}
+                  >
+                    {p}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Map Placeholder */}
-            <div className="mt-4 h-48 rounded-xl bg-muted border-2 border-dashed border-border flex items-center justify-center">
-              <div className="text-center">
-                <MapPin className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Map preview will appear here</p>
+            {formData.businessPlace !== 'Virtual Business' && (
+              <div>
+                <label className="text-sm font-medium">Business Location</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.open(
+                      'https://www.google.com/maps',
+                      '_blank'
+                    )
+                  }
+                  className={`w-full mt-2 px-4 py-3 rounded-lg border flex items-center gap-3
+                    ${
+                      formData.location
+                        ? 'bg-green-50 border-green-600'
+                        : 'hover:border-green-400'
+                    }`}
+                >
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-sm">
+                    {formData.location || 'Select from map'}
+                  </span>
+                </button>
               </div>
-            </div>
+            )}
           </div>
         )}
-      </div>
 
-      {/* Footer Actions */}
-      <div className="p-6 pb-8 space-y-3">
-        <Button 
-          size="lg" 
-          className="w-full bg-accent hover:bg-accent/90"
-          onClick={handleNext}
+        {/* ACTION */}
+        <Button
+          size="lg"
+          className="w-full bg-green-600 hover:bg-green-700"
           disabled={!isStepValid()}
+          onClick={handleNext}
         >
-          {step === totalSteps ? 'Launch Dashboard' : 'Continue'}
-          <ArrowRight className="w-5 h-5" />
+          {step === 3 ? 'Launch Dashboard' : 'Continue'}
+          <ArrowRight className="ml-2 w-4 h-4" />
         </Button>
-        {step > 1 && (
-          <Button 
-            variant="ghost" 
-            className="w-full"
-            onClick={handleBack}
-          >
-            Back
-          </Button>
-        )}
       </div>
     </div>
   );
